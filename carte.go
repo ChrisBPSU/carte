@@ -11,11 +11,11 @@ type severity []byte
 
 // Predefined severity levels
 var (
-	Info     severity = []byte("INFO")
-	Debug    severity = []byte("DEBG")
-	Warn     severity = []byte("WARN")
-	Error    severity = []byte("ERR ")
-	Critical severity = []byte("CRIT")
+	Info     severity = []byte("Info")
+	Debug    severity = []byte("Debg")
+	Warn     severity = []byte("Warn")
+	Error    severity = []byte("Err")
+	Critical severity = []byte("Crit")
 )
 
 // Detail is a struct for providing key-value pairs to a log
@@ -86,7 +86,7 @@ func log(writer io.Writer, sev severity, message string, details ...*Detail) (in
 	Settings.mux.Unlock()
 
 	// Rough estimate of all the required wrappers to a log, NOT the info
-	// Reduce the number of allocations
+	// Reduces the number of allocations
 	// TODO: calculate the entire size of the log and use copy or just directly assign the bytes (probably benchmark)
 	// Base of 42 + (if len dtls > 0) -> 9 + len dtls * 6
 	baseLogLen := 42
