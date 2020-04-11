@@ -19,6 +19,7 @@ type severity struct {
 	mux sync.Mutex
 }
 
+// GetWriter gets the writer of a severity
 func (s *severity) GetWriter() io.Writer {
 	s.mux.Lock()
 	defer s.mux.Unlock()
@@ -26,6 +27,7 @@ func (s *severity) GetWriter() io.Writer {
 	return s.writer
 }
 
+// SetWriter set the io.Writer that is logged to
 func (s *severity) SetWriter(w io.Writer) error {
 	if w == nil {
 		return ErrWriterWasNil
@@ -37,6 +39,15 @@ func (s *severity) SetWriter(w io.Writer) error {
 
 	return nil
 }
+
+// No nil checking, used internally for setting multiple writers
+func (s *severity) setWriter(w io.Writer) {
+	s.mux.Lock()
+	s.writer = w
+	s.mux.Unlock()
+}
+
+//Added ability to set all severities to a single writer, or to set multiple in a single call
 
 // Predefined severity levels
 var (
@@ -64,3 +75,35 @@ var (
 		writer: os.Stderr,
 	}
 )
+
+// SetWriters sets every severity to a single io.Writer
+func SetWriters(w io.Writer, severities ...severity) error {
+	// Nil check writer
+	if w == nil {
+		return ErrWriterWasNil
+	}
+
+	// Set writers
+	for _, s := range severities {
+		s.setWriter(w)
+	}
+
+	return nil
+}
+
+func SetAllWriters(w io.Writer) error {
+	// Nil check writer
+	if w == nil {
+		return ErrWriterWasNil
+	}
+
+	// Set all writers
+	// On addition to new writers, add to here
+	Info.setWriter(w)
+	Debug.setWriter(w)
+	Warn.setWriter(w)
+	Error.setWriter(w)
+	Critical.setWriter(w)
+
+	return nil
+}
