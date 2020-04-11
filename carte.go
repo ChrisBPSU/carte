@@ -7,17 +7,6 @@ import (
 	"time"
 )
 
-type severity []byte
-
-// Predefined severity levels
-var (
-	Info     severity = []byte("Info")
-	Debug    severity = []byte("Debg")
-	Warn     severity = []byte("Warn")
-	Error    severity = []byte("Err")
-	Critical severity = []byte("Crit")
-)
-
 // Detail is a struct for providing key-value pairs to a log
 // Also considered accepting an blank interface and either checking if it matches a specific interface w func -> string string
 // else if it doesnt match just setting the name to the type and the value to json marshalling of the object
@@ -26,64 +15,38 @@ type Detail struct {
 	Value string
 }
 
-// LogOut writes to Settings.writerOut
-func LogOut(sev severity, message string, details ...*Detail) (int, error) {
-	Settings.mux.Lock()
-	writer := Settings.writerOut
-	Settings.mux.Unlock()
-
-	return log(writer, sev, message, details...)
+// Log writes the writer specified in the severity struct
+func Log(sev severity, message string, details ...*Detail) {
+	_, _ = log(sev.GetWriter(), sev.name, message, details...)
 }
 
-// UlogOut is a no return writer to Settings.writerOut
-func UlogOut(sev severity, message string, details ...*Detail) {
-	Settings.mux.Lock()
-	writer := Settings.writerOut
-	Settings.mux.Unlock()
-
-	_, _ = log(writer, sev, message, details...)
-}
-
-// LogErr writes to Settings.writerErr
-func LogErr(sev severity, message string, details ...*Detail) (int, error) {
-	Settings.mux.Lock()
-	writer := Settings.writerErr
-	Settings.mux.Unlock()
-
-	return log(writer, sev, message, details...)
-}
-
-// UlogErr is a no return writer to Settings.writerErr
-func UlogErr(sev severity, message string, details ...*Detail) {
-	Settings.mux.Lock()
-	writer := Settings.writerErr
-	Settings.mux.Unlock()
-
-	_, _ = log(writer, sev, message, details...)
+// Rlog is the same as log, but returns the values from the call to Write()
+func Rlog(sev severity, message string, details ...*Detail) (int, error) {
+	return log(sev.GetWriter(), sev.name, message, details...)
 }
 
 // LogTo writes to the provided writer
-func LogTo(writer io.Writer, sev severity, message string, details ...*Detail) (int, error) {
-	return log(writer, sev, message, details...)
+func LogTo(writer io.Writer, sev severity, message string, details ...*Detail) {
+	_, _ = log(writer, sev.name, message, details...)
 }
 
-// UlogTo is a no return writer to the provided writer
-func UlogTo(writer io.Writer, sev severity, message string, details ...*Detail) {
-	_, _ = log(writer, sev, message, details...)
+// RlogTo is the same as LogTo, but returns the values from the call to Write()
+func RlogTo(writer io.Writer, sev severity, message string, details ...*Detail) (int, error) {
+	return log(writer, sev.name, message, details...)
 }
 
 // Made the log one line to allow for a quick synchronous write to a custom writer with mutex locking
-func log(writer io.Writer, sev severity, message string, details ...*Detail) (int, error) {
+func log(writer io.Writer, sevName []byte, message string, details ...*Detail) (int, error) {
 	// Get date
-	Settings.mux.Lock()
-	date := []byte(time.Now().In(Settings.location).Format(Settings.dateFormat))
-	Settings.mux.Unlock()
+	mux.Lock()
+	date := []byte(time.Now().In(timezone).Format(dateFormat))
+	mux.Unlock()
 
 	// Get func name
 	pc, _, _, ok := runtime.Caller(1)
-	Settings.mux.Lock()
-	funcName := getCallerName(pc, ok, Settings.functionNameLength)
-	Settings.mux.Unlock()
+	mux.Lock()
+	funcName := getCallerName(pc, ok, functionNameLength)
+	mux.Unlock()
 
 	// Rough estimate of all the required wrappers to a log, NOT the info
 	// Reduces the number of allocations
@@ -108,7 +71,7 @@ func log(writer io.Writer, sev severity, message string, details ...*Detail) (in
 	//_, _ = writer.Write(funcName)
 	// TYPE
 	jsonLog = append(jsonLog, []byte(`","Severity":"`)...)
-	jsonLog = append(jsonLog, sev...)
+	jsonLog = append(jsonLog, sevName...)
 	//_, _ = writer.Write([]byte(`","Type":"`))
 	//_, _ = writer.Write(logType.name)
 	// MESSAGE
