@@ -16,22 +16,23 @@ type Detail struct {
 }
 
 // Log writes the writer specified in the severity struct
-func Log(sev severity, message string, details ...*Detail) {
+func Log(sev *severity, message string, details ...*Detail) {
 	_, _ = log(sev.GetWriter(), sev.name, message, details...)
 }
 
 // Rlog is the same as log, but returns the values from the call to Write()
-func Rlog(sev severity, message string, details ...*Detail) (int, error) {
+func Rlog(sev *severity, message string, details ...*Detail) (int, error) {
 	return log(sev.GetWriter(), sev.name, message, details...)
 }
 
+// TODO: consider replacing severity with severityName, of type string or byte slice, for both LogTo's
 // LogTo writes to the provided writer
-func LogTo(writer io.Writer, sev severity, message string, details ...*Detail) {
+func LogTo(writer io.Writer, sev *severity, message string, details ...*Detail) {
 	_, _ = log(writer, sev.name, message, details...)
 }
 
 // RlogTo is the same as LogTo, but returns the values from the call to Write()
-func RlogTo(writer io.Writer, sev severity, message string, details ...*Detail) (int, error) {
+func RlogTo(writer io.Writer, sev *severity, message string, details ...*Detail) (int, error) {
 	return log(writer, sev.name, message, details...)
 }
 
