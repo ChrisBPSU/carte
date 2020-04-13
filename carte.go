@@ -3,7 +3,6 @@ package carte
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"reflect"
 	"strings"
 )
@@ -14,28 +13,16 @@ type Jsonable interface {
 
 // Log writes the writer specified in the severity struct
 func Log(sev *severity, message string, details ...interface{}) {
-	_, _ = log(sev.GetWriter(), sev.name, message, details...)
+	_, _ = log(sev, message, details...)
 }
 
 // Rlog is the same as log, but returns the values from the call to Write()
 func Rlog(sev *severity, message string, details ...interface{}) (int, error) {
-	return log(sev.GetWriter(), sev.name, message, details...)
-}
-
-// TODO: consider replacing severity with severityName, of type string or byte slice, for both LogTo's
-// TODO: if custom severities are added this can be removed
-// LogTo writes to the provided writer
-func LogTo(writer io.Writer, sev *severity, message string, details ...interface{}) {
-	_, _ = log(writer, sev.name, message, details...)
-}
-
-// RlogTo is the same as LogTo, but returns the values from the call to Write()
-func RlogTo(writer io.Writer, sev *severity, message string, details ...interface{}) (int, error) {
-	return log(writer, sev.name, message, details...)
+	return log(sev, message, details...)
 }
 
 // Made the log one line to allow for a quick synchronous write to a custom writer with mutex locking
-func log(writer io.Writer, sevName []byte, message string, details ...interface{}) (int, error) {
+func log(sev *severity, message string, details ...interface{}) (int, error) {
 	// Get date
 	date := getDate()
 
@@ -65,7 +52,7 @@ func log(writer io.Writer, sevName []byte, message string, details ...interface{
 
 	// TYPE
 	jsonLog = append(jsonLog, `","Severity":"`...)
-	jsonLog = append(jsonLog, sevName...)
+	jsonLog = append(jsonLog, sev.name...)
 
 	// MESSAGE
 	jsonLog = append(jsonLog, `","Message":"`...)
@@ -116,8 +103,12 @@ func log(writer io.Writer, sevName []byte, message string, details ...interface{
 	}
 	jsonLog = append(jsonLog, "}\n"...)
 
+	if hook := sev.getHook(); hook != nil {
+		go hook(jsonLog)
+	}
+
 	// TODO: add ability to write to StdOut as well if the writer is not
 	// Probably in settings
 
-	return writer.Write(jsonLog)
+	return sev.GetWriter().Write(jsonLog)
 }
