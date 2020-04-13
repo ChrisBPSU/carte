@@ -12,7 +12,6 @@ var (
 	ErrWriterWasNil = errors.New("received a nil io.Writer")
 )
 
-// TODO: add hooks to severity writes to allow for instant notifications
 // TODO: allow for the creation of severities
 
 type severity struct {
@@ -22,6 +21,18 @@ type severity struct {
 	hook func([]byte)
 
 	mux sync.Mutex
+}
+
+func NewSeverity(name []byte, w io.Writer, hook func([]byte)) (*severity, error) {
+	if w == nil {
+		return nil, ErrWriterWasNil
+	}
+
+	return &severity{
+		name:   name,
+		writer: w,
+		hook:   hook,
+	}, nil
 }
 
 // GetWriter gets the writer of a severity
@@ -58,7 +69,11 @@ func (s *severity) SetHook(hook func([]byte)) {
 	s.mux.Unlock()
 }
 
-//Added ability to set all severities to a single writer, or to set multiple in a single call
+func (s *severity) getHook() func([]byte) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	return s.hook
+}
 
 // Predefined severity levels
 var (
@@ -86,7 +101,7 @@ var (
 		writer: os.Stderr,
 	}
 
-	severities = []*severity{Info, Debug, Warn, Error, Critical}
+	allSeverities = []*severity{Info, Debug, Warn, Error, Critical}
 )
 
 // SetWriters sets every severity to a single io.Writer
@@ -111,7 +126,7 @@ func SetAllWriters(w io.Writer) error {
 	}
 
 	// Set all writers
-	for _, s := range severities {
+	for _, s := range allSeverities {
 		s.setWriter(w)
 	}
 
@@ -128,7 +143,7 @@ func SetHookFor(hook func([]byte), severities ...severity) {
 
 func SetAllHooks(hook func([]byte)) {
 	// Set all hooks
-	for _, s := range severities {
+	for _, s := range allSeverities {
 		s.SetHook(hook)
 	}
 }
