@@ -61,7 +61,7 @@ func log(sev *severity, message string, details ...interface{}) (int, error) {
 
 	// DETAILS
 	if len(details) > 0 {
-		jsonLog = append(jsonLog, `,"Details":{`...)
+		jsonLog = append(jsonLog, `,"Details":[`...)
 		for i, dtl := range details {
 			if dtl == nil {
 				continue
@@ -99,7 +99,7 @@ func log(sev *severity, message string, details ...interface{}) (int, error) {
 				jsonLog = append(jsonLog, ","...)
 			}
 		}
-		jsonLog = append(jsonLog, '}')
+		jsonLog = append(jsonLog, ']')
 	}
 	jsonLog = append(jsonLog, "}\n"...)
 
