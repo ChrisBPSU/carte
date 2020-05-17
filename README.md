@@ -1,2 +1,2 @@
 # carte
-A minimal json logger
+Minimal Json logger that uses Severities for customizability
