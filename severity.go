@@ -1,18 +1,11 @@
 package carte
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sync"
 )
-
-// Errors
-var (
-	ErrWriterWasNil = errors.New("received a nil io.Writer")
-)
-
-// TODO: allow for the creation of severities
 
 type severity struct {
 	name   []byte
@@ -23,16 +16,49 @@ type severity struct {
 	mux sync.Mutex
 }
 
-func NewSeverity(name []byte, w io.Writer, hook func([]byte)) (*severity, error) {
-	if w == nil {
-		return nil, ErrWriterWasNil
-	}
+// Log writes the writer specified in the severity struct
+func (s *severity) Err(e error, details ...Jsonable) {
+	details = append(details, &Jable{
+		Name:  "ERR",
+		Value: e.Error(),
+	})
+	_, _ = log(s, details...)
+}
 
+// Log writes the writer specified in the severity struct
+func (s *severity) Log(details ...Jsonable) {
+	_, _ = log(s, details...)
+}
+
+// Rlog is the same as log, but returns the values from the call to Write()
+//func Rlog(sev *severity, details ...Jsonable) (int, error) {
+//	return log(sev, details...)
+//}
+
+// Log writes the writer specified in the severity struct
+func (s *severity) Msg(msg string, details ...Jsonable) {
+	details = append(details, &Jable{
+		Name:  "MSG",
+		Value: msg,
+	})
+	_, _ = log(s, details...)
+}
+
+//Log writes the writer specified in the severity struct
+func (s *severity) Print(details ...string) {
+	j := &Jable{
+		Name:  "DTLS",
+		Value: fmt.Sprintf("%v", details),
+	}
+	_, _ = log(s, j)
+}
+
+func NewSeverity(name []byte, w io.Writer, hook func([]byte)) *severity {
 	return &severity{
 		name:   name,
 		writer: w,
 		hook:   hook,
-	}, nil
+	}
 }
 
 // GetWriter gets the writer of a severity
@@ -44,20 +70,8 @@ func (s *severity) GetWriter() io.Writer {
 }
 
 // SetWriter set the io.Writer that is logged to
-func (s *severity) SetWriter(w io.Writer) error {
-	if w == nil {
-		return ErrWriterWasNil
-	}
-
-	s.mux.Lock()
-	s.writer = w
-	s.mux.Unlock()
-
-	return nil
-}
-
-// No nil checking, used internally for setting multiple writers
-func (s *severity) setWriter(w io.Writer) {
+// Use nil to ignore writer output
+func (s *severity) SetWriter(w io.Writer) {
 	s.mux.Lock()
 	s.writer = w
 	s.mux.Unlock()
@@ -79,25 +93,29 @@ func (s *severity) getHook() func([]byte) {
 var (
 	// StdOut
 	Info = &severity{
-		name:   []byte("Info"),
+		name:   []byte("INF"),
 		writer: os.Stdout,
 	}
 	Debug = &severity{
-		name:   []byte("Debg"),
+		name:   []byte("DBG"),
 		writer: os.Stdout,
 	}
 
 	// StdErr
 	Warn = &severity{
-		name:   []byte("Warn"),
+		name:   []byte("WRN"),
 		writer: os.Stderr,
 	}
 	Error = &severity{
-		name:   []byte("Err"),
+		name:   []byte("ERR"),
 		writer: os.Stderr,
 	}
 	Critical = &severity{
-		name:   []byte("Crit"),
+		name:   []byte("CRT"),
+		writer: os.Stderr,
+	}
+	Panic = &severity{
+		name:   []byte("PNC"),
 		writer: os.Stderr,
 	}
 
@@ -105,32 +123,18 @@ var (
 )
 
 // SetWriters sets every severity to a single io.Writer
-func SetWriters(w io.Writer, severities ...severity) error {
-	// Nil check writer
-	if w == nil {
-		return ErrWriterWasNil
-	}
-
+func SetWriters(w io.Writer, severities ...severity) {
 	// Set writers
 	for _, s := range severities {
-		s.setWriter(w)
+		s.SetWriter(w)
 	}
-
-	return nil
 }
 
-func SetAllWriters(w io.Writer) error {
-	// Nil check writer
-	if w == nil {
-		return ErrWriterWasNil
-	}
-
+func SetAllWriters(w io.Writer) {
 	// Set all writers
 	for _, s := range allSeverities {
-		s.setWriter(w)
+		s.SetWriter(w)
 	}
-
-	return nil
 }
 
 // SetWriters sets every severity to a single io.Writer
